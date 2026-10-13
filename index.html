@@ -749,7 +749,7 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
         return call("DELETE", "/tmp.json").catch(function () {});
       });
   }
-  function explain(err) { return err && err.bad ? "Contraseña incorrecta." : "No se pudo guardar. Revisa tu conexión e intenta de nuevo."; }
+  function explain(err) { return err && err.bad ? "Contraseña incorrecta, o Firebase la rechazó. Revisa que clave_admin tenga la misma contraseña y que las reglas estén publicadas." : "No se pudo guardar. Revisa tu conexión e intenta de nuevo."; }
 
   /* ---------- acceso ---------- */
   function openLogin() {
@@ -765,7 +765,7 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
   $("loginOv").addEventListener("click", function (e) { if (e.target === $("loginOv")) $("loginOv").hidden = true; });
   $("loginForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
-    var v = $("pwd").value;
+    var v = $("pwd").value.trim().normalize("NFC");
     if (!v) { $("loginErr").textContent = "Escribe la contraseña."; return; }
     var go = $("loginGo"); go.disabled = true; $("loginErr").textContent = "";
     var prev = pwd; pwd = v;
@@ -935,7 +935,7 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
   /* cambiar contraseña */
   $("paneC").addEventListener("submit", function (ev) {
     ev.preventDefault();
-    var a = $("cNew").value, b2 = $("cNew2").value, err = $("passErr");
+    var a = $("cNew").value.trim().normalize("NFC"), b2 = $("cNew2").value.trim().normalize("NFC"), err = $("passErr");
     if (a.length < 8) { err.textContent = "La contraseña nueva debe tener al menos 8 caracteres."; return; }
     if (a !== b2) { err.textContent = "Las dos contraseñas no son iguales."; return; }
     if (a === pwd) { err.textContent = "La contraseña nueva es igual a la actual."; return; }

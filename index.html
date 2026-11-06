@@ -284,6 +284,39 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
 .flag.h { background: var(--orange); color: var(--ink); }
 .tip { font-size: 14px; color: var(--muted); }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 90; background: var(--fg); color: var(--ink); font-weight: 800; padding: 11px 20px; border-radius: 999px; box-shadow: 0 14px 30px rgba(0,0,0,.5); max-width: calc(100% - 32px); text-align: center; }
+
+/* pedidos: confirmación del cliente */
+.cform, .cdone { display: flex; flex-direction: column; gap: 14px; }
+.cdone { text-align: center; }
+.dn-k { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.dn-num { font-family: var(--f-display); font-weight: 800; font-size: 76px; line-height: 1; color: var(--orange); }
+.dn-t { color: var(--muted); }
+.dn-l { list-style: none; text-align: left; background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.foot-wm { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+/* panel de cocina */
+.kitchen { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; }
+.k-in { max-width: 860px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(60px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.k-acts { display: flex; gap: 8px; }
+.ocard { background: var(--surface); border: 1px solid var(--line); border-left: 6px solid var(--orange); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.ocard.ok { border-left-color: var(--green); }
+.ocard.no { border-left-color: var(--muted); opacity: .85; }
+.ocard.new { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(255,46,147,.35); }
+.ohead { display: flex; align-items: center; gap: 12px; }
+.onum { font-family: var(--f-display); font-weight: 800; font-size: 38px; line-height: 1; color: var(--orange); min-width: 2ch; }
+.ominfo { flex: 1; min-width: 0; }
+.oname { font-weight: 800; font-size: 18px; overflow-wrap: anywhere; }
+.om, .otimes { color: var(--muted); font-size: 14px; }
+.otimes { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.otipo { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 4px 10px; background: var(--violet); color: var(--ink); white-space: nowrap; }
+.oitems { list-style: none; display: flex; flex-direction: column; gap: 6px; background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; font-size: 17px; }
+.oitems b { color: var(--green); font-variant-numeric: tabular-nums; }
+.oitems em { display: block; color: var(--orange); font-style: normal; font-size: 14px; }
+.oextra { font-size: 15px; background: rgba(255,159,46,.12); border-radius: 12px; padding: 8px 12px; overflow-wrap: anywhere; }
+.ofoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.otot { font-family: var(--f-display); font-size: 22px; font-variant-numeric: tabular-nums; }
+.oacts { display: flex; gap: 8px; flex-wrap: wrap; }
+.field input[type="date"] { width: 100%; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -350,7 +383,7 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
   </main>
 
   <footer>
-    <span class="wm foot-wm" aria-label="Chúpate el Deo"><span class="a">Chúpate</span><span class="b">el</span><span class="c">Deo</span></span>
+    <span class="wm foot-wm" id="footWm" aria-label="Chúpate el Deo"><span class="a">Chúpate</span><span class="b">el</span><span class="c">Deo</span></span>
     <span class="foot-line">Hecho con amor, servido con pasión</span>
     <a class="foot-ig" id="footIg" href="#" target="_blank" rel="noopener"></a>
   </footer>
@@ -365,6 +398,7 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
 <div class="overlay sheetov" id="cartOv" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cartT">
     <div class="sheet-head"><h2 id="cartT">Tu <span>pedido</span></h2><button type="button" class="x" id="cartClose" aria-label="Cerrar">&times;</button></div>
+    <div class="cform" id="cForm">
     <ul class="citems" id="cartList"></ul>
     <div class="ctotal"><span>Total</span><b id="cartTotal"></b></div>
     <p class="tip">El valor del domicilio, si aplica, se confirma por WhatsApp.</p>
@@ -377,11 +411,23 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
       </div>
     </div>
     <div class="field" id="cAddrRow" hidden><label for="cAddr">Dirección de entrega</label><input type="text" id="cAddr" maxlength="120" autocomplete="street-address"></div>
+    <div class="field" id="cPhoneRow" hidden><label for="cPhone">Tu teléfono (para el domicilio)</label><input type="text" id="cPhone" inputmode="tel" maxlength="20" autocomplete="tel"></div>
     <div class="field"><label for="cNotes">Notas del pedido (opcional)</label><textarea id="cNotes" maxlength="200"></textarea></div>
     <div class="err" id="cErr" role="alert"></div>
-    <button type="button" class="b pri big" id="cSend">Enviar pedido por WhatsApp</button>
+    <button type="button" class="b pri big" id="cSend">Enviar pedido</button>
+    <button type="button" class="b sec" id="cWa">Prefiero enviarlo por WhatsApp</button>
     <p class="okmsg" id="cOk" hidden>Se abrió WhatsApp con tu pedido. Toca Enviar allá para confirmarlo. Si no se abrió, toca el botón otra vez.</p>
     <button type="button" class="b sec" id="cClear">Vaciar pedido</button>
+    </div>
+    <div class="cdone" id="cDone" hidden>
+      <p class="dn-k">Tu número de pedido</p>
+      <div class="dn-num" id="dnNum"></div>
+      <p class="dn-t">¡Listo! Recibimos tu pedido en la cocina. Guarda este número para que lo identifiquemos.</p>
+      <ul class="dn-l" id="dnList"></ul>
+      <div class="ctotal"><span>Total</span><b id="dnTotal"></b></div>
+      <button type="button" class="b sec" id="dnWa">Enviar copia por WhatsApp</button>
+      <button type="button" class="b pri" id="dnClose">Cerrar</button>
+    </div>
   </div>
 </div>
 
@@ -391,7 +437,7 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
 <div class="overlay" id="loginOv" hidden>
   <form class="modal" id="loginForm" role="dialog" aria-modal="true" aria-labelledby="loginT">
     <h2 id="loginT">Panel del restaurante</h2>
-    <p>Escribe la contraseña para editar la carta.</p>
+    <p id="loginP">Escribe la contraseña para editar la carta.</p>
     <div class="field"><label for="pwd">Contraseña</label><input type="password" id="pwd" autocomplete="current-password"></div>
     <div class="err" id="loginErr" role="alert"></div>
     <div class="row2"><button type="button" class="b sec" id="loginCancel">Cancelar</button><button type="submit" class="b pri" id="loginGo">Entrar</button></div>
@@ -482,6 +528,27 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
       <div class="err" id="passErr" role="alert"></div>
       <button type="submit" class="b pri" id="passSave">Guardar contraseña nueva</button>
     </form>
+  </div>
+</div>
+<!-- cocina -->
+<div class="kitchen" id="kitchen" hidden>
+  <div class="k-in">
+    <div class="admin-top"><h2>Cocina</h2><div class="k-acts"><button type="button" class="b sec sm" id="kSound" aria-pressed="true">Sonido: sí</button><button type="button" class="b sec sm" id="kClose">Salir</button></div></div>
+    <div class="tabs" role="group" aria-label="Secciones de cocina">
+      <button type="button" id="kTabP" aria-pressed="true">Pendientes</button>
+      <button type="button" id="kTabH" aria-pressed="false">Historial</button>
+    </div>
+    <p class="tip" id="kStatus"></p>
+    <div id="kPaneP" class="alist"><div id="kList" class="alist"></div></div>
+    <div id="kPaneH" class="alist" hidden>
+      <div class="row2">
+        <div class="field"><label for="kDate">Día</label><input type="date" id="kDate"></div>
+        <div class="field"><label for="kSearch">Buscar (nombre o número)</label><input type="text" id="kSearch" autocomplete="off"></div>
+      </div>
+      <p class="hsum" id="kSum"></p>
+      <div id="kHist" class="alist"></div>
+      <button type="button" class="b sec" id="kMore" hidden>Cargar pedidos más antiguos</button>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -707,7 +774,7 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     });
     $("cartTotal").textContent = fmtN(cartTotals().total);
   }
-  function openCart() { renderCartList(); $("cErr").textContent = ""; $("cOk").hidden = true; $("cartOv").hidden = false; }
+  function openCart() { renderCartList(); $("cErr").textContent = ""; $("cOk").hidden = true; $("cForm").hidden = false; $("cDone").hidden = true; $("cartOv").hidden = false; }
   $("cartOpen").addEventListener("click", openCart);
   $("cartClose").addEventListener("click", function () { $("cartOv").hidden = true; });
   $("cartOv").addEventListener("click", function (e) { if (e.target === $("cartOv")) $("cartOv").hidden = true; });
@@ -716,11 +783,11 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     b.addEventListener("click", function () {
       orderType = b.getAttribute("data-t");
       Array.prototype.forEach.call($("cType").querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
-      $("cAddrRow").hidden = orderType !== "Domicilio";
+      $("cAddrRow").hidden = orderType !== "Domicilio"; $("cPhoneRow").hidden = orderType !== "Domicilio";
     });
   });
-  function buildOrderText(name) {
-    var code = Date.now().toString(36).slice(-4).toUpperCase();
+  function buildOrderText(name, num) {
+    var code = num ? String(num) : Date.now().toString(36).slice(-4).toUpperCase();
     var lines = ["PEDIDO #" + code + " A NOMBRE DE: " + name, ""];
     Object.keys(cart).forEach(function (id) {
       var inf = itemInfo(id); if (!inf) return; var it = cart[id];
@@ -729,21 +796,91 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     });
     lines.push("", "Total: " + fmtN(cartTotals().total) + (orderType === "Domicilio" ? " (sin domicilio)" : ""));
     lines.push("Tipo de pedido: " + orderType);
-    if (orderType === "Domicilio") lines.push("Dirección: " + $("cAddr").value.trim());
+    if (orderType === "Domicilio") { lines.push("Dirección: " + $("cAddr").value.trim()); if ($("cPhone").value.trim()) lines.push("Teléfono: " + $("cPhone").value.trim()); }
     var nt = $("cNotes").value.trim(); if (nt) lines.push("Notas: " + nt);
     return lines.join("\n");
   }
-  $("cSend").addEventListener("click", function () {
+  /* ---------- pedido a la cocina (se guarda en Firebase) ---------- */
+  var lastOrder = null;
+  function validOrder() {
     var name = $("cName").value.trim(), err = $("cErr");
-    if (!Object.keys(cart).length) { err.textContent = "Tu pedido está vacío."; return; }
-    if (!name) { err.textContent = "Escribe tu nombre para el pedido."; $("cName").focus(); return; }
-    if (orderType === "Domicilio" && !$("cAddr").value.trim()) { err.textContent = "Escribe la dirección de entrega."; $("cAddr").focus(); return; }
+    if (!Object.keys(cart).length) { err.textContent = "Tu pedido está vacío."; return null; }
+    if (!name) { err.textContent = "Escribe tu nombre para el pedido."; $("cName").focus(); return null; }
+    if (orderType === "Domicilio" && !$("cAddr").value.trim()) { err.textContent = "Escribe la dirección de entrega."; $("cAddr").focus(); return null; }
+    if (orderType === "Domicilio" && !$("cPhone").value.trim()) { err.textContent = "Escribe un teléfono para el domicilio."; $("cPhone").focus(); return null; }
     err.textContent = "";
     try { localStorage.setItem("chupate-nombre", name); } catch (e) {}
-    var a = document.createElement("a"); a.href = waUrl(buildOrderText(name)); a.target = "_blank"; a.rel = "noopener";
+    return name;
+  }
+  function openWa(text) {
+    var a = document.createElement("a"); a.href = waUrl(text); a.target = "_blank"; a.rel = "noopener";
     document.body.appendChild(a); a.click(); a.remove();
-    $("cOk").hidden = false;
+  }
+  $("cWa").addEventListener("click", function () {
+    var name = validOrder(); if (!name) return;
+    openWa(buildOrderText(name)); $("cOk").hidden = false;
   });
+  function bogotaDate() { return new Date(Date.now() - 5 * 3600000).toISOString().slice(0, 10).replace(/-/g, ""); }
+  function orderPayload(name) {
+    var items = {}, i = 0;
+    Object.keys(cart).forEach(function (k) {
+      var inf = itemInfo(k); if (!inf) return;
+      var it = cart[k], row = { n: String(inf.name).slice(0, 100), q: it.q, p: inf.price };
+      if (it.nota && it.nota.trim()) row.nota = it.nota.trim().slice(0, 80);
+      items["i" + (i++)] = row;
+    });
+    var o = { nombre: name.slice(0, 40), tipo: orderType, items: items, total: cartTotals().total, estado: "pendiente", creado: { ".sv": "timestamp" } };
+    if (orderType === "Domicilio") { o.direccion = $("cAddr").value.trim().slice(0, 120); o.telefono = $("cPhone").value.trim().slice(0, 20); }
+    var nt = $("cNotes").value.trim(); if (nt) o.notas = nt.slice(0, 200);
+    return o;
+  }
+  function putJson(path, body) { return fetch(DB + path, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); }
+  function createOrder(base) {
+    var day = bogotaDate();
+    return fetch(DB + "/contador/" + day + ".json", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : 0; }, function () { return 0; })
+      .then(function (n) {
+        function attempt(num, tries) {
+          if (tries > 25 || num > 9999) return Promise.reject(new Error("busy"));
+          var key = "~" + day + "-" + ("0000" + num).slice(-4), body = {};
+          Object.keys(base).forEach(function (k) { body[k] = base[k]; });
+          body.numero = num;
+          return putJson("/pedidos/" + key + ".json", body).then(function (r) {
+            if (r.ok) return num;
+            if (r.status === 401 || r.status === 403) return attempt(num + 1, tries + 1);
+            throw new Error("http " + r.status);
+          });
+        }
+        return attempt((parseInt(n, 10) || 0) + 1, 0);
+      })
+      .then(function (num) { putJson("/contador/" + day + ".json", num).catch(function () {}); return num; });
+  }
+  function showDone(num) {
+    $("dnNum").textContent = "#" + num;
+    var ul = $("dnList"); ul.innerHTML = "";
+    Object.keys(cart).forEach(function (k) {
+      var inf = itemInfo(k); if (!inf) return; var it = cart[k];
+      ul.appendChild(h("li", null, [it.q + " × " + inf.name + (it.nota && it.nota.trim() ? " — " + it.nota.trim() : "")]));
+    });
+    $("dnTotal").textContent = fmtN(cartTotals().total);
+    $("cForm").hidden = true; $("cDone").hidden = false;
+    $("cartOv").querySelector(".sheet").scrollTop = 0;
+  }
+  $("cSend").addEventListener("click", function () {
+    var name = validOrder(); if (!name) return;
+    var btn = $("cSend"), err = $("cErr");
+    btn.disabled = true; btn.textContent = "Enviando…";
+    createOrder(orderPayload(name)).then(function (num) {
+      lastOrder = { num: num, text: buildOrderText(name, num) };
+      showDone(num);
+      cart = {}; saveCart(); refreshCtrls(); renderCartBar();
+      $("cNotes").value = "";
+    }).catch(function () {
+      err.textContent = "No pudimos registrar tu pedido. Revisa tu conexión e intenta de nuevo, o envíalo por WhatsApp.";
+    }).then(function () { btn.disabled = false; btn.textContent = "Enviar pedido"; });
+  });
+  $("dnWa").addEventListener("click", function () { if (lastOrder) openWa(lastOrder.text); });
+  $("dnClose").addEventListener("click", function () { $("cartOv").hidden = true; });
 
   function renderPublic() {
     var aviso = String(get("aviso") || "").trim();
@@ -805,7 +942,7 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     observeCats();
     if (pruneCart()) toast("Algunos platos de tu pedido ya no están disponibles y se quitaron.");
     renderCartBar();
-    if (!$("cartOv").hidden) { renderCartList(); if (!Object.keys(cart).length) $("cartOv").hidden = true; }
+    if (!$("cartOv").hidden && $("cDone").hidden) { renderCartList(); if (!Object.keys(cart).length) $("cartOv").hidden = true; }
   }
   var io = null;
   function observeCats() {
@@ -846,8 +983,12 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
   function explain(err) { return err && err.bad ? "Contraseña incorrecta, o Firebase la rechazó. Revisa que clave_admin tenga la misma contraseña y que las reglas estén publicadas." : "No se pudo guardar. Revisa tu conexión e intenta de nuevo."; }
 
   /* ---------- acceso ---------- */
-  function openLogin() {
-    if (pwd) { openAdmin(); return; }
+  var loginMode = "admin";
+  function openLogin(mode) {
+    loginMode = mode === "cocina" ? "cocina" : "admin";
+    $("loginT").textContent = loginMode === "cocina" ? "Cocina" : "Panel del restaurante";
+    $("loginP").textContent = loginMode === "cocina" ? "Escribe la contraseña para ver los pedidos." : "Escribe la contraseña para editar la carta.";
+    if (pwd) { if (loginMode === "cocina") openKitchen(); else openAdmin(); return; }
     $("loginErr").textContent = ""; $("pwd").value = "";
     $("loginOv").hidden = false; $("pwd").focus();
   }
@@ -855,15 +996,21 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     tapN++; clearTimeout(tapT); tapT = setTimeout(function () { tapN = 0; }, 1200);
     if (tapN >= 3) { tapN = 0; openLogin(); }
   });
+  var footN = 0, footT = null;
+  $("footWm").addEventListener("click", function () {
+    footN++; clearTimeout(footT); footT = setTimeout(function () { footN = 0; }, 1200);
+    if (footN >= 3) { footN = 0; openLogin("cocina"); }
+  });
   $("loginCancel").addEventListener("click", function () { $("loginOv").hidden = true; });
   $("loginOv").addEventListener("click", function (e) { if (e.target === $("loginOv")) $("loginOv").hidden = true; });
   $("loginForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     var v = $("pwd").value.trim().normalize("NFC");
     if (!v) { $("loginErr").textContent = "Escribe la contraseña."; return; }
+    if (loginMode === "cocina" && v.charCodeAt(0) >= 126) { $("loginErr").textContent = "Para la cocina, la contraseña debe empezar con una letra o un número (sin ñ ni tildes al inicio)."; return; }
     var go = $("loginGo"); go.disabled = true; $("loginErr").textContent = "";
     var prev = pwd; pwd = v;
-    save({}).then(function () { $("loginOv").hidden = true; openAdmin(); })
+    save({}).then(function () { $("loginOv").hidden = true; if (loginMode === "cocina") openKitchen(); else openAdmin(); })
       .catch(function (e) { pwd = prev; $("loginErr").textContent = explain(e); })
       .then(function () { go.disabled = false; });
   });
@@ -1111,6 +1258,168 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     }).catch(function (e) { err.textContent = explain(e); })
       .then(function () { btn.disabled = false; });
   });
+
+  /* ---------- cocina: pedidos pendientes e historial ---------- */
+  var K = { pend: {}, seen: null, fresh: {}, sig: "", timer: null, hist: [], limit: 100, more: false, sound: true, ctx: null, lock: null, busy: {} };
+  function qs(extra) { return "?orderBy=" + encodeURIComponent('"$key"') + "&startAt=" + encodeURIComponent(JSON.stringify(pwd)) + (extra || ""); }
+  function kGet(node, extra) {
+    return fetch(DB + "/" + node + ".json" + qs(extra), { cache: "no-store" }).then(function (r) {
+      if (r.status === 401 || r.status === 403) { var e = new Error("perm"); e.perm = true; throw e; }
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    }).then(function (d) { return d || {}; });
+  }
+  function sortedList(obj) { return Object.keys(obj).sort().map(function (k) { var o = obj[k]; if (!o || typeof o !== "object") o = {}; o.id = k; return o; }); }
+  function tz(ts, opt) {
+    try { return new Date(ts).toLocaleString("es-CO", Object.assign({ timeZone: "America/Bogota" }, opt)); } catch (e) { return new Date(ts).toLocaleString(); }
+  }
+  function fmtDT(ts) { return ts ? tz(ts, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "—"; }
+  function dayOf(ts) { return new Date((ts || 0) - 5 * 3600000).toISOString().slice(0, 10); }
+  function mins(m) { return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + (m % 60) + " min"; }
+  function ago(ts) { var m = Math.max(0, Math.round((Date.now() - ts) / 60000)); return m < 1 ? "ahora" : "hace " + mins(m); }
+  function dur(a, b) { return a && b ? mins(Math.max(0, Math.round((b - a) / 60000))) : ""; }
+  function itemsOf(o) {
+    var it = o.items || {};
+    return Object.keys(it).sort(function (a, b) { return parseInt(a.slice(1), 10) - parseInt(b.slice(1), 10); }).map(function (k) { return it[k]; }).filter(Boolean);
+  }
+  function itemLines(o) {
+    return h("ul", { class: "oitems" }, itemsOf(o).map(function (x) {
+      return h("li", null, [h("b", { text: (x.q || 1) + " ×" }), h("span", { text: " " + (x.n || "") }), x.nota ? h("em", { text: "Nota: " + x.nota }) : null]);
+    }));
+  }
+  function orderHead(o) {
+    return h("div", { class: "ohead" }, [
+      h("div", { class: "onum", text: "#" + (o.numero || "?") }),
+      h("div", { class: "ominfo" }, [h("div", { class: "oname", text: o.nombre || "Sin nombre" }), h("div", { class: "om", text: fmtDT(o.creado) })]),
+      h("span", { class: "otipo", text: o.tipo || "" })
+    ]);
+  }
+  function extras(o) {
+    return [
+      o.tipo === "Domicilio" ? h("div", { class: "oextra", text: "Dirección: " + (o.direccion || "—") + (o.telefono ? " · Tel: " + o.telefono : "") }) : null,
+      o.notas ? h("div", { class: "oextra", text: "Notas: " + o.notas }) : null
+    ];
+  }
+  function pendCard(o) {
+    var isNew = K.fresh[o.id] && Date.now() - K.fresh[o.id] < 60000;
+    var done = h("button", { type: "button", class: "b pri", text: "Servido ✓", onclick: function () { finish(o, "servido", this); } });
+    var cancel = h("button", { type: "button", class: "b dng sm", text: "Cancelar", onclick: function () {
+      if (confirm("¿Cancelar el pedido #" + o.numero + "? Se guarda en el historial como cancelado.")) finish(o, "cancelado", this);
+    } });
+    var kids = [orderHead(o), h("div", { class: "om", text: "Pidió " + fmtDT(o.creado) + " · " + ago(o.creado) }), itemLines(o)].concat(extras(o));
+    kids.push(h("div", { class: "ofoot" }, [h("b", { class: "otot", text: fmtN(o.total || 0) }), h("div", { class: "oacts" }, [cancel, done])]));
+    return h("article", { class: "ocard" + (isNew ? " new" : "") }, kids);
+  }
+  function renderKitchen() {
+    var list = sortedList(K.pend), box = $("kList"); box.innerHTML = "";
+    $("kTabP").textContent = "Pendientes" + (list.length ? " (" + list.length + ")" : "");
+    if (!list.length) box.appendChild(h("div", { class: "empty", text: "No hay pedidos pendientes. Cuando llegue uno, sonará un aviso." }));
+    list.forEach(function (o) { box.appendChild(pendCard(o)); });
+  }
+  function finish(o, estado, btn) {
+    if (K.busy[o.id]) return; K.busy[o.id] = true; btn.disabled = true;
+    var rec = {};
+    Object.keys(o).forEach(function (k) { if (k !== "id") rec[k] = o[k]; });
+    rec.estado = estado; rec[estado === "servido" ? "servido" : "cancelado"] = { ".sv": "timestamp" };
+    var u = {}; u["pedidos/" + o.id] = null; u["historial/" + o.id] = rec;
+    save(u).then(function () {
+      delete K.pend[o.id]; K.sig = "";
+      toast("Pedido #" + o.numero + (estado === "servido" ? " servido" : " cancelado"));
+      renderKitchen(); if (!$("kPaneH").hidden) loadHist();
+    }).catch(function (e) { btn.disabled = false; toast(explain(e)); })
+      .then(function () { delete K.busy[o.id]; });
+  }
+  function beep() {
+    if (!K.sound) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      if (!K.ctx) K.ctx = new AC();
+      if (K.ctx.resume) K.ctx.resume();
+      [0, 0.25, 0.5].forEach(function (d, i) {
+        var t = K.ctx.currentTime + d, o = K.ctx.createOscillator(), g = K.ctx.createGain();
+        o.type = "sine"; o.frequency.value = i % 2 ? 1046 : 784;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+        o.connect(g); g.connect(K.ctx.destination); o.start(t); o.stop(t + 0.25);
+      });
+    } catch (e) {}
+  }
+  function pollKitchen() {
+    if ($("kitchen").hidden) return;
+    kGet("pedidos").then(function (d) {
+      $("kStatus").textContent = "";
+      var ids = Object.keys(d).sort(), fresh = [];
+      if (K.seen) ids.forEach(function (id) { if (!K.seen[id]) fresh.push(id); });
+      K.seen = {}; ids.forEach(function (id) { K.seen[id] = 1; });
+      fresh.forEach(function (id) { K.fresh[id] = Date.now(); });
+      K.pend = d;
+      var sig = ids.join("|") + "@" + Math.floor(Date.now() / 60000);
+      if (sig !== K.sig) { K.sig = sig; renderKitchen(); }
+      if (fresh.length) { beep(); toast("Nuevo pedido #" + (d[fresh[0]].numero || "")); }
+    }).catch(function (e) {
+      $("kStatus").textContent = e.perm ? "No se pudieron leer los pedidos. Revisa que las reglas de Firebase estén publicadas y que la contraseña sea correcta." : "Sin conexión. Reintentando…";
+    });
+  }
+  function loadHist() {
+    kGet("historial", "&limitToLast=" + K.limit).then(function (d) {
+      K.hist = sortedList(d).reverse(); K.more = K.hist.length >= K.limit; renderHist();
+    }).catch(function () { $("kSum").textContent = "No se pudo cargar el historial."; });
+  }
+  function histCard(o) {
+    var done = o.estado === "servido", end = done ? o.servido : o.cancelado;
+    var kids = [orderHead(o), h("div", { class: "otimes" }, [
+      h("span", { text: "Pidió: " + fmtDT(o.creado) }),
+      h("span", { text: (done ? "Servido: " : "Cancelado: ") + fmtDT(end) }),
+      done && end ? h("span", { text: "Tardó " + dur(o.creado, end) }) : null
+    ]), itemLines(o)].concat(extras(o));
+    kids.push(h("div", { class: "ofoot" }, [h("b", { class: "otot", text: fmtN(o.total || 0) }), h("span", { class: "flag " + (done ? "h" : "o"), text: done ? "Servido" : "Cancelado" })]));
+    return h("article", { class: "ocard " + (done ? "ok" : "no") }, kids);
+  }
+  function renderHist() {
+    var day = $("kDate").value, q = $("kSearch").value.trim().toLowerCase().replace(/^#/, "");
+    var list = K.hist.filter(function (o) {
+      if (day && dayOf(o.creado) !== day) return false;
+      if (q && String(o.nombre || "").toLowerCase().indexOf(q) < 0 && String(o.numero) !== q) return false;
+      return true;
+    });
+    var served = list.filter(function (o) { return o.estado === "servido"; });
+    var tot = served.reduce(function (s, o) { return s + (Number(o.total) || 0); }, 0);
+    $("kSum").textContent = list.length ? list.length + (list.length === 1 ? " pedido" : " pedidos") + " · " + served.length + (served.length === 1 ? " servido" : " servidos") + " · " + fmtN(tot) + " vendidos" : "No hay pedidos con ese filtro.";
+    var box = $("kHist"); box.innerHTML = "";
+    list.forEach(function (o) { box.appendChild(histCard(o)); });
+    $("kMore").hidden = !K.more;
+  }
+  function kTab(t) {
+    $("kPaneP").hidden = t !== "p"; $("kPaneH").hidden = t !== "h";
+    $("kTabP").setAttribute("aria-pressed", t === "p" ? "true" : "false");
+    $("kTabH").setAttribute("aria-pressed", t === "h" ? "true" : "false");
+    if (t === "h") { K.limit = 100; loadHist(); }
+  }
+  function keepAwake() {
+    try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { K.lock = l; }).catch(function () {}); } catch (e) {}
+  }
+  function openKitchen() {
+    $("kitchen").hidden = false; document.body.style.overflow = "hidden";
+    K.seen = null; K.pend = {}; K.fresh = {}; K.sig = "";
+    $("kStatus").textContent = "Cargando pedidos…"; $("kList").innerHTML = "";
+    kTab("p"); pollKitchen();
+    clearInterval(K.timer); K.timer = setInterval(pollKitchen, 5000);
+    keepAwake();
+  }
+  function closeKitchen() {
+    clearInterval(K.timer); $("kitchen").hidden = true; document.body.style.overflow = ""; pwd = "";
+    try { if (K.lock) K.lock.release(); } catch (e) {} K.lock = null;
+  }
+  $("kClose").addEventListener("click", closeKitchen);
+  $("kTabP").addEventListener("click", function () { kTab("p"); });
+  $("kTabH").addEventListener("click", function () { kTab("h"); });
+  $("kDate").addEventListener("input", renderHist);
+  $("kSearch").addEventListener("input", renderHist);
+  $("kMore").addEventListener("click", function () { K.limit += 100; loadHist(); });
+  $("kSound").addEventListener("click", function () {
+    K.sound = !K.sound; this.setAttribute("aria-pressed", K.sound ? "true" : "false"); this.textContent = "Sonido: " + (K.sound ? "sí" : "no");
+    if (K.sound) beep();
+  });
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && !$("kitchen").hidden) { keepAwake(); pollKitchen(); } });
 
   document.addEventListener("visibilitychange", function () { if (!document.hidden && $("admin").hidden && state.loaded && !state.failed) load(); });
   function renderAll() { renderPublic(); if (!$("admin").hidden) renderAdmin(); }

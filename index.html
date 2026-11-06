@@ -316,7 +316,9 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
 .ofoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .otot { font-family: var(--f-display); font-size: 22px; font-variant-numeric: tabular-nums; }
 .oacts { display: flex; gap: 8px; flex-wrap: wrap; }
-.field input[type="date"] { width: 100%; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; color-scheme: dark; }
+.kfilters { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.kfilters .field input { min-height: 48px; }
+.field input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; text-align: left; width: 100%; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; color-scheme: dark; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -541,7 +543,7 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
     <p class="tip" id="kStatus"></p>
     <div id="kPaneP" class="alist"><div id="kList" class="alist"></div></div>
     <div id="kPaneH" class="alist" hidden>
-      <div class="row2">
+      <div class="kfilters">
         <div class="field"><label for="kDate">Día</label><input type="date" id="kDate"></div>
         <div class="field"><label for="kSearch">Buscar (nombre o número)</label><input type="text" id="kSearch" autocomplete="off"></div>
       </div>

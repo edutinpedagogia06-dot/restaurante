@@ -451,20 +451,9 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
   <div class="admin-in">
     <div class="admin-top"><h2>Panel del restaurante</h2><button type="button" class="b sec sm" id="adminClose">Salir</button></div>
     <div class="tabs" role="group" aria-label="Secciones del panel">
-      <button type="button" id="tabH" aria-pressed="true">Hoy</button>
-      <button type="button" id="tabP" aria-pressed="false">Platos</button>
+      <button type="button" id="tabP" aria-pressed="true">Platos</button>
       <button type="button" id="tabA" aria-pressed="false">Ajustes</button>
       <button type="button" id="tabC" aria-pressed="false">Contraseña</button>
-    </div>
-
-    <div id="paneH">
-      <div class="alist">
-        <p class="tip">Enciende solo lo que hay hoy. Lo que dejes apagado no lo ve el cliente.</p>
-        <div class="hsum" id="hSum"></div>
-        <div class="bulk" id="hTools"><button type="button" class="b sec sm" id="allOn">Encender todos</button><button type="button" class="b sec sm" id="allOff">Apagar todos</button></div>
-        <div class="field" id="hSearchRow"><label for="hSearch">Buscar plato</label><input type="text" id="hSearch" autocomplete="off" placeholder="Escribe el nombre"></div>
-        <div id="hList" class="alist"></div>
-      </div>
     </div>
 
     <div id="paneP">
@@ -539,9 +528,17 @@ body.has-cart .fab { bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
     <div class="tabs" role="group" aria-label="Secciones de cocina">
       <button type="button" id="kTabP" aria-pressed="true">Pendientes</button>
       <button type="button" id="kTabH" aria-pressed="false">Historial</button>
+      <button type="button" id="kTabD" aria-pressed="false">Platos</button>
     </div>
     <p class="tip" id="kStatus"></p>
     <div id="kPaneP" class="alist"><div id="kList" class="alist"></div></div>
+    <div id="kPaneD" class="alist" hidden>
+      <p class="tip">Enciende solo lo que hay hoy. Lo que dejes apagado no lo ve el cliente.</p>
+      <div class="hsum" id="kdSum"></div>
+      <div class="bulk" id="kdTools"><button type="button" class="b sec sm" id="kAllOn">Encender todos</button><button type="button" class="b sec sm" id="kAllOff">Apagar todos</button></div>
+      <div class="field" id="kdSearchRow" hidden><label for="kdSearch">Buscar plato</label><input type="text" id="kdSearch" autocomplete="off" placeholder="Escribe el nombre"></div>
+      <div id="kdList" class="alist"></div>
+    </div>
     <div id="kPaneH" class="alist" hidden>
       <div class="kfilters">
         <div class="field"><label for="kDate">Día</label><input type="date" id="kDate"></div>
@@ -967,25 +964,33 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
       return fetch(DB + path, { method: method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
     }
     var payload = {}; Object.keys(updates || {}).forEach(function (k) { payload[k] = updates[k]; });
-    payload.tmp = pwd;
+    var cook = role === "cocina", tf = cook ? "tmpc" : "tmp";
+    payload[tf] = pwd;
     var run = function () {
-      return call("DELETE", "/tmp.json")
-        .catch(function () {})
-        .then(function () { return call("PATCH", "/.json", payload); })
-        .then(function (r) {
-          if (r.status === 401 || r.status === 403) { var e = new Error("clave"); e.bad = true; throw e; }
-          if (!r.ok) throw new Error("http " + r.status);
-          return call("DELETE", "/tmp.json").catch(function () {});
-        });
+      var tries = 0;
+      function once() {
+        return call("DELETE", "/" + tf + ".json")
+          .catch(function () {})
+          .then(function () { return call("PATCH", "/.json", payload); })
+          .then(function (r) {
+            if (r.status === 401 || r.status === 403) {
+              if (cook && ++tries < 3) return new Promise(function (ok) { setTimeout(ok, 450); }).then(once);
+              var e = new Error("clave"); e.bad = true; throw e;
+            }
+            if (!r.ok) throw new Error("http " + r.status);
+            return call("DELETE", "/" + tf + ".json").catch(function () {});
+          });
+      }
+      return once();
     };
     var res = saveQ.then(run, run);
     saveQ = res.catch(function () {});
     return res;
   }
-  function explain(err) { return err && err.bad ? "Contraseña incorrecta, o Firebase la rechazó. Revisa que clave_admin tenga la misma contraseña y que las reglas estén publicadas." : "No se pudo guardar. Revisa tu conexión e intenta de nuevo."; }
+  function explain(err) { return err && err.bad ? "Contraseña incorrecta, o Firebase la rechazó. Revisa que " + (role === "cocina" ? "clave_cocina" : "clave_admin") + " tenga la misma contraseña y que las reglas estén publicadas." : "No se pudo guardar. Revisa tu conexión e intenta de nuevo."; }
 
   /* ---------- acceso ---------- */
-  var loginMode = "admin";
+  var loginMode = "admin", role = "admin";
   function openLogin(mode) {
     loginMode = mode === "cocina" ? "cocina" : "admin";
     $("loginT").textContent = loginMode === "cocina" ? "Cocina" : "Panel del restaurante";
@@ -1011,9 +1016,9 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     if (!v) { $("loginErr").textContent = "Escribe la contraseña."; return; }
     if (loginMode === "cocina" && v.charCodeAt(0) >= 126) { $("loginErr").textContent = "Para la cocina, la contraseña debe empezar con una letra o un número (sin ñ ni tildes al inicio)."; return; }
     var go = $("loginGo"); go.disabled = true; $("loginErr").textContent = "";
-    var prev = pwd; pwd = v;
-    save({}).then(function () { $("loginOv").hidden = true; if (loginMode === "cocina") openKitchen(); else openAdmin(); })
-      .catch(function (e) { pwd = prev; $("loginErr").textContent = explain(e); })
+    var prev = pwd, prevRole = role; pwd = v; role = loginMode;
+    (loginMode === "cocina" ? kGet("pedidos", "&limitToFirst=1") : save({})).then(function () { $("loginOv").hidden = true; if (loginMode === "cocina") openKitchen(); else openAdmin(); })
+      .catch(function (e) { pwd = prev; role = prevRole; $("loginErr").textContent = e && e.perm ? "Contraseña incorrecta, o Firebase la rechazó. Revisa que clave_cocina exista en Datos y que las reglas estén publicadas." : explain(e); })
       .then(function () { go.disabled = false; });
   });
   document.addEventListener("keydown", function (ev) {
@@ -1023,24 +1028,21 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
   });
 
   /* ---------- panel ---------- */
-  function openAdmin() { $("admin").hidden = false; document.body.style.overflow = "hidden"; fillSettings(); renderAdmin(); showTab("h"); }
+  function openAdmin() { $("admin").hidden = false; document.body.style.overflow = "hidden"; fillSettings(); renderAdmin(); showTab("p"); }
   function closeAdmin() { $("admin").hidden = true; document.body.style.overflow = ""; pwd = ""; hideForm(); $("cNew").value = ""; $("cNew2").value = ""; }
   $("adminClose").addEventListener("click", closeAdmin);
   function showTab(t) {
-    $("paneH").hidden = t !== "h"; $("tabH").setAttribute("aria-pressed", t === "h" ? "true" : "false");
     $("paneP").hidden = t !== "p"; $("paneA").hidden = t !== "a"; $("paneC").hidden = t !== "c";
     $("tabP").setAttribute("aria-pressed", t === "p" ? "true" : "false");
     $("tabA").setAttribute("aria-pressed", t === "a" ? "true" : "false");
     $("tabC").setAttribute("aria-pressed", t === "c" ? "true" : "false");
   }
-  $("tabH").addEventListener("click", function () { showTab("h"); });
   $("tabP").addEventListener("click", function () { showTab("p"); });
   $("tabA").addEventListener("click", function () { showTab("a"); });
   $("tabC").addEventListener("click", function () { $("passErr").textContent = ""; showTab("c"); });
 
   function realDishes() { return state.example ? [] : dishList(); }
   function renderAdmin() {
-    renderHoy();
     var box = $("adminList"); box.innerHTML = "";
     var list = realDishes();
     $("searchRow").hidden = list.length < 6;
@@ -1103,32 +1105,6 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
       renderAll(); toast(explain(e));
     });
   }
-  var hFilter = "";
-  function renderHoy() {
-    var box = $("hList"); box.innerHTML = "";
-    var all = realDishes(), list = hFilter ? all.filter(function (p) { return String(p.nombre).toLowerCase().indexOf(hFilter) >= 0; }) : all;
-    var on = all.filter(function (p) { return !p.agotado; }).length;
-    $("hSum").textContent = all.length ? on + " de " + all.length + " platos disponibles hoy" : "";
-    $("hTools").hidden = !all.length; $("hSearchRow").hidden = all.length < 6;
-    if (!all.length) {
-      box.appendChild(h("div", { class: "empty" }, [
-        h("p", { text: "Primero crea tus platos en la pestaña Platos. Cuando estén creados, aquí enciendes los que hay cada día." }),
-        h("button", { type: "button", class: "b sec", text: "Ir a Platos", onclick: function () { showTab("p"); } })
-      ]));
-      return;
-    }
-    catOrder(all).forEach(function (c) {
-      var items = list.filter(function (p) { return (p.cat || "Otros") === c; }); if (!items.length) return;
-      box.appendChild(h("div", { class: "hcat", text: c }));
-      items.forEach(function (p) {
-        box.appendChild(h("div", { class: "hrow" + (p.agotado ? " off" : "") }, [
-          h("div", { style: "min-width:0" }, [h("div", { class: "n", text: p.nombre }), h("div", { class: "m", text: priceLabel(p) })]),
-          h("button", { type: "button", class: "sw", role: "switch", "aria-checked": p.agotado ? "false" : "true", "aria-label": p.nombre + ": disponible hoy", onclick: function () { setAvail([p.id], !!p.agotado); } })
-        ]));
-      });
-    });
-  }
-  $("hSearch").addEventListener("input", function () { hFilter = this.value.trim().toLowerCase(); renderHoy(); });
   function bulkBtn(id, label, avail) {
     var b = $(id), armed = false;
     b.addEventListener("click", function () {
@@ -1137,7 +1113,6 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
       setAvail(realDishes().map(function (p) { return p.id; }), avail);
     });
   }
-  bulkBtn("allOn", "Encender todos", true); bulkBtn("allOff", "Apagar todos", false);
   function seedExamples() {
     var u = {}, t = Date.now(), i = 0;
     Object.keys(EXAMPLE).forEach(function (k) { var d = copyDish(EXAMPLE[k]); d.creado = t + i++; u["menu/platos/" + k] = d; });
@@ -1391,10 +1366,12 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     $("kMore").hidden = !K.more;
   }
   function kTab(t) {
-    $("kPaneP").hidden = t !== "p"; $("kPaneH").hidden = t !== "h";
+    $("kPaneP").hidden = t !== "p"; $("kPaneH").hidden = t !== "h"; $("kPaneD").hidden = t !== "d";
     $("kTabP").setAttribute("aria-pressed", t === "p" ? "true" : "false");
     $("kTabH").setAttribute("aria-pressed", t === "h" ? "true" : "false");
+    $("kTabD").setAttribute("aria-pressed", t === "d" ? "true" : "false");
     if (t === "h") { K.limit = 100; loadHist(); }
+    if (t === "d") { renderDishesK(); load(); }
   }
   function keepAwake() {
     try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { K.lock = l; }).catch(function () {}); } catch (e) {}
@@ -1411,9 +1388,32 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
     clearInterval(K.timer); $("kitchen").hidden = true; document.body.style.overflow = ""; pwd = "";
     try { if (K.lock) K.lock.release(); } catch (e) {} K.lock = null;
   }
+  /* platos de hoy, desde la cocina (guarda solo el campo "agotado") */
+  var kdFilter = "";
+  function renderDishesK() {
+    var box = $("kdList"); box.innerHTML = "";
+    var all = realDishes(), list = kdFilter ? all.filter(function (p) { return String(p.nombre).toLowerCase().indexOf(kdFilter) >= 0; }) : all;
+    var on = all.filter(function (p) { return !p.agotado; }).length;
+    $("kdSum").textContent = all.length ? on + " de " + all.length + " platos disponibles hoy" : "";
+    $("kdTools").hidden = !all.length; $("kdSearchRow").hidden = all.length < 6;
+    if (!all.length) { box.appendChild(h("div", { class: "empty" }, [h("p", { text: "Todavía no hay platos creados. Pídele al dueño que los cree." })])); return; }
+    catOrder(all).forEach(function (c) {
+      var items = list.filter(function (p) { return (p.cat || "Otros") === c; }); if (!items.length) return;
+      box.appendChild(h("div", { class: "hcat", text: c }));
+      items.forEach(function (p) {
+        box.appendChild(h("div", { class: "hrow" + (p.agotado ? " off" : "") }, [
+          h("div", { style: "min-width:0" }, [h("div", { class: "n", text: p.nombre }), h("div", { class: "m", text: priceLabel(p) })]),
+          h("button", { type: "button", class: "sw", role: "switch", "aria-checked": p.agotado ? "false" : "true", "aria-label": p.nombre + ": disponible hoy", onclick: function () { setAvail([p.id], !!p.agotado); } })
+        ]));
+      });
+    });
+  }
+  $("kdSearch").addEventListener("input", function () { kdFilter = this.value.trim().toLowerCase(); renderDishesK(); });
+  bulkBtn("kAllOn", "Encender todos", true); bulkBtn("kAllOff", "Apagar todos", false);
   $("kClose").addEventListener("click", closeKitchen);
   $("kTabP").addEventListener("click", function () { kTab("p"); });
   $("kTabH").addEventListener("click", function () { kTab("h"); });
+  $("kTabD").addEventListener("click", function () { kTab("d"); });
   $("kDate").addEventListener("input", renderHist);
   $("kSearch").addEventListener("input", renderHist);
   $("kMore").addEventListener("click", function () { K.limit += 100; loadHist(); });
@@ -1424,7 +1424,7 @@ var DB_URL = "https://restaurantesusa-fb41d-default-rtdb.firebaseio.com";
   document.addEventListener("visibilitychange", function () { if (!document.hidden && !$("kitchen").hidden) { keepAwake(); pollKitchen(); } });
 
   document.addEventListener("visibilitychange", function () { if (!document.hidden && $("admin").hidden && state.loaded && !state.failed) load(); });
-  function renderAll() { renderPublic(); if (!$("admin").hidden) renderAdmin(); }
+  function renderAll() { renderPublic(); if (!$("admin").hidden) renderAdmin(); if (!$("kitchen").hidden && !$("kPaneD").hidden) renderDishesK(); }
   loadCart();
   renderPublic();
   load();
